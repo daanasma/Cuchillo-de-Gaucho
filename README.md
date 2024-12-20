@@ -8,6 +8,12 @@ You can install cuchillo-de-gaucho via pip:
 ``` 
 pip install cuchillo-de-gaucho 
 ``` 
+
+For local use while developing, install it like this:
+
+```
+pip install -e "C:\code\cuchillo-de-gaucho"
+```
  
 ## Usage 
 Example of usage: 

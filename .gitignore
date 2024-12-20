@@ -55,3 +55,9 @@ coverage.xml
 
 # Windows
 Thumbs.db
+
+
+# Logging
+logging/
+log/
+logs/
