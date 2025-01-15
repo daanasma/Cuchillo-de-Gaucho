@@ -1,7 +1,7 @@
 from sqlalchemy import Engine, create_engine, text
-
+from .decorators import time_function
 import logging
-
+import re
 from typing import Union, List
 
 
@@ -46,7 +46,7 @@ def connect_postgres_database(
     logging.info(f"Succesfullly created engine to database {dbname}")
     return e
 
-
+@time_function
 def execute_postgres_query(e: Engine, q: Union[str, List[str]]):
     """
     Execute SQL query or a list of SQL queries on a PostgreSQL database.
@@ -67,16 +67,25 @@ def execute_postgres_query(e: Engine, q: Union[str, List[str]]):
     trans = connection.begin()
 
     try:
+        results = []  # Store results for SELECT queries
         # Execute all queries in the list
         for query in q:
             query_obj = text(query)
-            logging.debug(f"Executing query: {query}")
-            connection.execute(query_obj)
+            logging.info(f"Executing query: {' '.join(query.split())}".replace('\n', ' ').strip()[:100] + " (cutoff at 100)")
+            # Execute the query
+            result = connection.execute(query_obj)
+
+            # Fetch results for SELECT queries
+            if result.returns_rows:
+                results.append(result.fetchall())  # Collect all rows for each SELECT query
+            else:
+                results.append(None)  # Non-SELECT queries return None
 
         # Commit transaction if all queries succeed
         trans.commit()
         logging.info("All queries executed successfully and transaction committed.")
 
+        return results  # Return the collected results
     except Exception as e:
         # Rollback transaction in case of an error
         trans.rollback()

@@ -4,12 +4,16 @@ from . import pathUtils as pu
 from . import pgUtils as pgu
 import os
 import geopandas as gpd
+import pandas as pd
+import polars as pl
+from .decorators import time_function
+
+from sqlalchemy import Engine
 
 import logging
 
-
 #READING
-def read_to_geodataframe(path: str, driver: str = "ESRI Shapefile") -> gpd.GeoDataFrame:
+def read_file_to_geodataframe(path: str, driver: str = "ESRI Shapefile") -> gpd.GeoDataFrame:
 	"""
 	Reads a spatial dataset from a path. The default driver is shapefile, but others can be specified.
 
@@ -29,8 +33,51 @@ def read_to_geodataframe(path: str, driver: str = "ESRI Shapefile") -> gpd.GeoDa
 	logging.info(f"Finished reading spatial dataframe. size = {len(gdf)}")
 	return gdf
 
+def read_postgres_to_pandas_df(query: str, engine: Engine) -> pd.DataFrame:
+    """
+    Reads data from a PostgreSQL database into a Pandas DataFrame using an SQLAlchemy engine.
+
+    Parameters:
+        query (str): The SQL query to execute.
+        engine (Engine): SQLAlchemy engine connected to the database.
+
+    Returns:
+        pd.DataFrame: Data fetched from the database as a Pandas DataFrame.
+    """
+    try:
+        # Use the engine to execute the query and load data into a Pandas DataFrame
+        df = pd.read_sql(query, con=engine)
+        logging.info("Query executed and data loaded into Pandas DataFrame.")
+        return df
+    except Exception as e:
+        logging.error(f"Error while fetching data: {e}")
+        raise
+
+
 
 #WRITING
+@time_function
+def write_pandas_to_postgres(df: pd.DataFrame, table_name: str, schema_name: str, engine: Engine, if_exists: str = 'replace') -> None:
+    """
+    Writes data from a Pandas DataFrame to a PostgreSQL table using an SQLAlchemy engine.
+
+    Parameters:
+        df (pd.DataFrame): The Pandas DataFrame to be written to the database.
+        schema_name (str): The name of the table to write the data to. (no schema here)
+        table_name (str): The name of the table to write the data to.
+        engine (Engine): SQLAlchemy engine connected to the database.
+        if_exists (str): Action to take if the table already exists.
+                          Options: 'replace', 'append', 'fail'. Default is 'replace'.
+    """
+
+    try:
+        # Use the engine to write the DataFrame to the PostgreSQL database
+        df.to_sql(table_name, con=engine, schema=schema_name, if_exists=if_exists, index=False, method='multi')
+        logging.info(f"Data successfully written to {table_name} in the database.")
+    except Exception as e:
+        logging.error(f"Error while writing data to {table_name}: {e}")
+        raise
+
 
 def write_from_geodataframe(gdf: gpd.GeoDataFrame, foldername: str, layername: str, driver: str = "ESRI Shapefile"):
 	"""
@@ -74,7 +121,6 @@ def ogr_load_data_to_geopackage(ogr_path, geopackage_path, source, lr_name, over
 		wu.run_subprocess(ogr2ogr_command)
 
 
-
 def ogr_load_data_to_postgis(
 		ogr_path,
 		source_path,
@@ -105,6 +151,7 @@ def ogr_load_data_to_postgis(
 	:param source_format: Input file format (e.g., 'GPKG', 'ESRI Shapefile'). Auto-detected if None.
 	:return: None
 	"""
+	logging.info("Start loading data to postgres.")
 	# Detect the source format if not specified
 	if not source_format:
 		_, ext = os.path.splitext(source_path)
@@ -143,6 +190,40 @@ def ogr_load_data_to_postgis(
 	if source_layer_name:
 		command.append(source_layer_name)
 
-	print(command)
+	logging.info(command)
 	# Run the command as a subprocess
 	wu.run_subprocess(command)
+
+
+###TRANSFORM
+
+@time_function
+def pandas_to_polars(pandas_df):
+	"""
+	Converts a Pandas DataFrame to a Polars DataFrame.
+
+	Parameters:
+		pandas_df (pandas.DataFrame): Input Pandas DataFrame.
+
+	Returns:
+		polars.DataFrame: Converted Polars DataFrame.
+	"""
+	logging.info(f"Start converting pandas to polars. n={len(pandas_df)} rows.")
+	pld = pl.from_pandas(pandas_df)
+	return pld
+
+
+@time_function
+def polars_to_pandas(polars_df):
+    """
+    Converts a Polars DataFrame to a Pandas DataFrame.
+
+    Parameters:
+        polars_df (polars.DataFrame): Input Polars DataFrame.
+
+    Returns:
+        pandas.DataFrame: Converted Pandas DataFrame.
+    """
+    logging.info(f"Start converting polars to pandas. n={len(polars_df)} rows.")
+    pdf = polars_df.to_pandas()
+    return pdf

@@ -16,10 +16,11 @@ pip install -e "C:\code\cuchillo-de-gaucho"
 ```
  
 ## Usage 
-Example of usage: 
- 
+Example of usage:
+
 ```python 
-from cuchillo_de_gaucho import add, multiply 
-print(add(2, 3)) 
+from cuchillo_de_gaucho import add, multiply
+
+print(add(2, 3))
 print(multiply(2, 3)) 
 ``` 

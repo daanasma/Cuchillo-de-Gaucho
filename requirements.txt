@@ -1,3 +1,6 @@
 geopandas
+pandas
 sqlalchemy
 psycopg2
+polars
+pyarrow

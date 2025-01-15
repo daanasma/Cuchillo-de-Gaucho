@@ -2,9 +2,9 @@ from setuptools import setup, find_packages
  
 setup( 
     name="cuchillo_de_gaucho",
-    version="0.1",
+    version="0.0.2",
     packages=find_packages(), 
-    install_requires=['geopandas', 'sqlalchemy', 'psycopg2'],  # List any dependencies here, e.g., 'numpy'
+    install_requires=['geopandas', 'sqlalchemy', 'psycopg2', 'polars', 'pyarrow'],  # List any dependencies here
     author="Daan Asma",
     author_email="nope",
     description="A collection of useful utility functions.", 

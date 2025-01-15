@@ -38,8 +38,19 @@ coverage.xml
 
 # PyCharm
 .idea/  # PyCharm project settings directory
+/.idea/  # PyCharm project settings directory
+/.idea/*  # PyCharm project settings directory
 .idea/*   # All files in the .idea folder
 *.iml   # PyCharm module files
+/.idea/.gitignore
+/.idea/cuchillo-de-gaucho.iml
+/.idea/jupyter-settings.xml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/inspectionProfiles/Project_Default.xml
+/.idea/vcs.xml
+
 
 # VS Code
 .vscode/
@@ -61,3 +72,4 @@ Thumbs.db
 logging/
 log/
 logs/
+
