@@ -4,14 +4,7 @@ import logging
 import re
 from typing import Union, List
 
-
-def make_connection_string_postgres(
-        db_name: str,
-        user: str,
-        password: str,
-        host: str,
-        port: int = 5432
-) -> str:
+def make_connection_string_postgres( db_name: str, user: str, password: str, host: str, port: int = 5432 ) -> str:
     """
     Creates a PostgreSQL/PostGIS connection string for use with ogr2ogr or similar tools.
 
@@ -27,9 +20,7 @@ def make_connection_string_postgres(
     print(connection_string)
     return connection_string
 
-def connect_postgres_database(
-    user: str, password: str, host: str, port:str, dbname: str
-) -> Engine:
+def connect_postgres_database(user: str, password: str, host: str, port:str, dbname: str) -> Engine:
     """
     Connect to an existing postgres database
 
@@ -97,6 +88,29 @@ def execute_postgres_query(e: Engine, q: Union[str, List[str]]):
         connection.close()
         logging.info("Connection closed.")
 
+def get_table_names_matching_wildcard(engine, schema, wildcard):
+    """
+    Get all table names from a specified schema that match the wildcard.
+
+    :param engine: SQLAlchemy engine instance connected to the database.
+    :param schema: The schema name to search within.
+    :param wildcard: The wildcard pattern to match table names.
+    :return: List of table names matching the wildcard.
+    """
+    # Query to find tables with the wildcard
+    query = f"""
+        SELECT tablename
+        FROM pg_tables
+        WHERE schemaname = '{schema}'AND tablename LIKE '{wildcard}';
+    """
+    res = execute_postgres_query(engine, query)
+    try:
+        if len(res):
+            return [r[0] for r in res[0]]
+    except Exception as e:
+        logging.info(f"Cant return tables based on query because {e}")
+        return []
+
 def sql_gen_create_schema_if_not_exists(schema_name: str, owner: str = None, grant_usage: bool = True):
     """
     Create a schema if it does not already exist.
@@ -135,3 +149,19 @@ def sql_gen_create_spatial_index(table_name: str, schema_name: str = 'public', g
     USING GIST ({geometry_column}); 
     """
     return sql_query
+
+def sql_gen_convert_wkt_to_geom(table_to_update: str, wkt_col: str, geometry_column: str = 'geom') -> str:
+    sql = f"""-- Step 1: Add the new geometry column
+        ALTER TABLE {table_to_update}
+        ADD COLUMN {geometry_column} geometry;
+        
+        -- Step 2: Update the new column with the converted WKT values
+        UPDATE  {table_to_update}
+        SET point_geom = ST_GeomFromText({wkt_col});
+        
+        -- Step 3: Drop the original WKT column
+        ALTER TABLE  {table_to_update}
+        DROP COLUMN {wkt_col};
+        """
+    return sql
+
