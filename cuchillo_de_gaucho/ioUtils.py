@@ -33,6 +33,42 @@ def read_file_to_geodataframe(path: str, driver: str = "ESRI Shapefile") -> gpd.
 	logging.info(f"Finished reading spatial dataframe. size = {len(gdf)}")
 	return gdf
 
+
+import os
+import pandas as pd
+import logging
+
+import os
+import pandas as pd
+import logging
+
+
+def read_csv_to_dataframe(path: str, delimiter: str = ",", dtypes: dict = None) -> pd.DataFrame:
+	"""
+	Reads a CSV file from a given path into a pandas DataFrame. The default delimiter is a comma,
+	but others can be specified. Specific data types for columns can be defined using a dictionary.
+
+	:param path: The path to the CSV file
+	:param delimiter: The delimiter used in the CSV file (default: ',')
+	:param dtypes: A dictionary mapping column names to data types (e.g., {"col1": "int64", "col2": "float64"})
+		For a full list of supported data types, refer to the pandas documentation:
+		https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html
+	:returns: A pandas DataFrame containing the data from the CSV file
+	"""
+
+	filename = os.path.basename(path)
+	foldername = os.path.dirname(path)
+	logging.info(f"Reading CSV file '{filename}' from folder '{foldername}'")
+
+	try:
+		df = pd.read_csv(path, delimiter=delimiter, dtype=dtypes)
+		logging.info(f"Finished reading CSV file. Number of rows = {len(df)}")
+		return df
+	except Exception as e:
+		logging.error(f"Failed to read CSV file '{filename}'. Error: {e}")
+		raise
+
+
 def read_postgres_to_pandas_df(query: str, engine: Engine) -> pd.DataFrame:
     """
     Reads data from a PostgreSQL database into a Pandas DataFrame using an SQLAlchemy engine.
