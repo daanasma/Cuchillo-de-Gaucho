@@ -34,15 +34,6 @@ def read_file_to_geodataframe(path: str, driver: str = "ESRI Shapefile") -> gpd.
 	return gdf
 
 
-import os
-import pandas as pd
-import logging
-
-import os
-import pandas as pd
-import logging
-
-
 def read_csv_to_dataframe(path: str, delimiter: str = ",", dtypes: dict = None) -> pd.DataFrame:
 	"""
 	Reads a CSV file from a given path into a pandas DataFrame. The default delimiter is a comma,
@@ -61,7 +52,7 @@ def read_csv_to_dataframe(path: str, delimiter: str = ",", dtypes: dict = None) 
 	logging.info(f"Reading CSV file '{filename}' from folder '{foldername}'")
 
 	try:
-		df = pd.read_csv(path, delimiter=delimiter, dtype=dtypes)
+		df = pd.read_csv(path, delimiter=delimiter, dtype=dtypes, na_values=['NA', ''])
 		logging.info(f"Finished reading CSV file. Number of rows = {len(df)}")
 		return df
 	except Exception as e:
