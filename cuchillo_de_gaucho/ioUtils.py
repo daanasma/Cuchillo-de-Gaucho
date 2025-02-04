@@ -1,7 +1,8 @@
 from . import winUtils as wu
-from . import geoUtils as gu
+from . import geoUtils as geou
 from . import pathUtils as pu
 from . import pgUtils as pgu
+
 import os
 import geopandas as gpd
 import pandas as pd
@@ -9,6 +10,7 @@ import polars as pl
 from .decorators import time_function
 
 from sqlalchemy import Engine
+from geoalchemy2 import Geometry, WKTElement
 
 import logging
 
@@ -30,7 +32,7 @@ def read_file_to_geodataframe(path: str, driver: str = "ESRI Shapefile") -> gpd.
 		gdf = gpd.read_file(foldername, layer=layername)
 	else:
 		gdf = gpd.read_file(path, driver=driver)
-	logging.info(f"Finished reading spatial dataframe. size = {len(gdf)}")
+	logging.info(f"Finished reading spatial dataframe {layername}. size = {len(gdf)}")
 	return gdf
 
 
@@ -53,7 +55,7 @@ def read_csv_to_dataframe(path: str, delimiter: str = ",", dtypes: dict = None) 
 
 	try:
 		df = pd.read_csv(path, delimiter=delimiter, dtype=dtypes, na_values=['NA', ''])
-		logging.info(f"Finished reading CSV file. Number of rows = {len(df)}")
+		logging.info(f"Finished reading CSV file . Number of rows = {len(df)} (path: {path})")
 		return df
 	except Exception as e:
 		logging.error(f"Failed to read CSV file '{filename}'. Error: {e}")
@@ -106,7 +108,79 @@ def write_pandas_to_postgres(df: pd.DataFrame, table_name: str, schema_name: str
         raise
 
 
-def write_from_geodataframe(gdf: gpd.GeoDataFrame, foldername: str, layername: str, driver: str = "ESRI Shapefile"):
+def write_geopandas_to_postgis(
+		gdf: gpd.GeoDataFrame,
+		table_name: str,
+		schema_name: str,
+		engine: Engine,
+		if_exists: str = "replace",
+		sindex: bool = False,
+		srid: str = "EPSG:31370",
+		geometry_col: str = "geometry"
+):
+	"""
+	Write a geodataframe to a postgres table. If multiple geometry types are found, the write happens in multiple steps.
+
+	:param df: The source geodataframe
+	:param table_name: the table name
+	:param schema_name: The target schema
+	:param engine: the database engine
+	:param if_exists: The action to take when the table name already exists (replace, append, fail)
+	:param index: Flag indicating the creation of a spatial index on the geom column
+	:param srid: A string representation of the SRID (e.g. EPSG:31370). If not given, will be deduced from dataset.
+	:param geometry_col: A string representing the geometry column name. default is "geometry"
+	:return:
+	"""
+	logging.info("Start writing to postgis table {}".format(table_name))
+
+	import pyproj
+	crs = pyproj.CRS(srid)
+
+	# srid = gdf.crs.to_epsg()
+	srid = crs.to_epsg()
+	# logging.info(f'crs: {gdf.crs}')
+	gtypes = [geom for geom in gdf.geom_type.unique()]
+	logging.info(
+		"The following geometry types were found in {}: {}".format(table_name, gtypes)
+	)
+	gdf["geom"] = gdf[geometry_col].apply(
+		lambda x: WKTElement(x.wkt, srid=srid) if x else None
+	)	# geom_masker = gdf['geometry']
+
+	# drop the geometry column as it is now duplicative
+	# gdf.drop('geometry', 1, inplace=True)
+	wantedcols = [col for col in gdf.columns.values if col != geometry_col]
+
+	# Use 'dtype' to specify column's type
+	# For the geom column, we will use GeoAlchemy's type 'Geometry'
+	# for idx, gtype in enumerate(gtypes):
+	# exists = exists if idx == 1 else 'append'
+	# mask = geom_masker.geom_type == gtype
+	gtype = gtypes[0] if len(gtypes) == 1 else "geometry"
+	logging.info(
+		"Using geom type {} and srid {} for {}. Importing {} features".format(
+			gtype, srid, table_name, len(gdf)
+		)
+	)
+
+	gdf[wantedcols].to_sql(
+		table_name,
+		engine,
+		schema=schema_name,
+		if_exists=if_exists,
+		index=False,
+		dtype={"geom": Geometry(gtype, srid=srid)},
+	)
+	if sindex:
+		with e.connect() as con:
+			con.execute(
+				f"CREATE INDEX {table_name}_gix ON {table_name} USING GIST(geom);"
+			)
+	# gdf.drop("geom") #todo fix this
+	logging.info("Finished writing postgis table {}".format(table_name))
+
+
+def write_geopandas_to_file(gdf: gpd.GeoDataFrame, foldername: str, layername: str, driver: str = "ESRI Shapefile"):
 	"""
 	Writes a geodataframe to a spatial dataset at a specified path. If the path does not exist, it is created
 
@@ -128,7 +202,7 @@ def write_from_geodataframe(gdf: gpd.GeoDataFrame, foldername: str, layername: s
 def ogr_load_data_to_geopackage(ogr_path, geopackage_path, source, lr_name, overwrite=True):
 	features_in_geopackage_path = []
 	if not overwrite and os.path.exists(geopackage_path):
-		features_in_geopackage_path = gu.list_all_features_in_geopackage_sqlite(geopackage_path)
+		features_in_geopackage_path = geou.list_all_features_in_geopackage_sqlite(geopackage_path)
 
 	if (not overwrite and lr_name in features_in_geopackage_path):
 		logging.warning(f"Not loading {lr_name} because it already exists in target geopackage")

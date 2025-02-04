@@ -1,14 +1,123 @@
 import pandas as pd
 import geopandas as gpd
+from shapely import wkt
 import polars as pl
 import logging
+import re
+
+from . import geoUtils as geou
 
 #### PANDAS #####
 def filter_pandas_df_with_sql(df: pd.DataFrame, sql_query: str) -> pd.DataFrame:
-	return df.query(sql_query)
+    """
+    Filter a pandas DataFrame (or GeoDataFrame) using an SQL-like query.
+
+    This function allows you to filter a DataFrame based on a query string written in SQL-like syntax.
+    It uses pandas' built-in `query` method to execute the query and return a subset of the DataFrame
+    that matches the conditions.
+
+    :param df: The pandas DataFrame (or GeoDataFrame) to be filtered.
+    :param sql_query: The SQL-like query to filter the DataFrame. Should follow pandas query syntax.
+    :return: A DataFrame containing only the rows that satisfy the query conditions.
+
+    Logs:
+        INFO log will be generated showing the executed query and the number of rows remaining
+        after filtering.
+    """
+    res_df = df.query(sql_query)
+    logging.info(f"Filtered dataframe with {sql_query}. Remaining: {len(res_df)} rows.")
+    return res_df
+
+
+def pandas_df_to_geodataframe(df, geom_col='geom', crs='EPSG:4326'):
+	"""
+	Convert a DataFrame to a GeoDataFrame.
+
+	This function converts a pandas DataFrame with a column containing geometries (as WKT strings or Shapely geometries)
+	into a GeoDataFrame. If the geometries are provided as WKT strings, the function attempts to load them using the
+	`wkt.loads` method. It also handles empty or invalid geometries gracefully.
+
+	:param df: The source DataFrame to be converted into a GeoDataFrame.
+	:param geom_col: The name of the column containing the geometries. Defaults to 'geom'.
+	:param crs: The coordinate reference system to assign to the resulting GeoDataFrame.
+				Defaults to 'EPSG:4326' if not provided.
+	:return: A GeoDataFrame with the geometry column specified.
+	"""
+
+	if geom_col not in df.columns:
+		raise ValueError(f"Geometry column '{geom_col}' not found in DataFrame.")
+
+	# Handle geometry conversion (from WKT strings if necessary)
+
+	df[geom_col] = df[geom_col].apply(geou.safe_wkt_load)
+
+	# Create and return the GeoDataFrame
+	return gpd.GeoDataFrame(df, geometry=geom_col, crs=crs)
+
+
 def filter_pandas_df_is_in(df: pd.DataFrame, attribute: str, range: list):
 	subset = df[df[attribute].isin(range)]
 	return subset
+
+def pandas_series_remove_string_occurrences(series: pd.Series, patterns: list) -> pd.Series:
+    """
+    Removes all occurrences of specified patterns from a given pandas Series.
+
+    Args:
+    series (pd.Series): The Series to clean.
+    patterns (list): A list of substrings or regex patterns to remove.
+
+    Returns:
+    pd.Series: A cleaned pandas Series.
+    """
+    # Combine all patterns into a single regex pattern
+    combined_pattern = '|'.join(map(re.escape, patterns))
+
+    # Apply regex replacement
+    return series.str.replace(combined_pattern, '', regex=True)
+
+def pandas_series_keep_only_numbers(series: pd.Series) -> pd.Series:
+    """
+    Removes all non-numeric characters from a pandas Series.
+
+    Args:
+    series (pd.Series): The Series to clean.
+
+    Returns:
+    pd.Series: A Series containing only numeric characters.
+    """
+    return series.replace(r'\D+', '', regex=True)  # \D matches any non-digit
+
+def pandas_clean_dataframe_remove_substrings_from_column(df: pd.DataFrame, src_column: str, target_column: str, patterns_to_remove: list) -> pd.DataFrame:
+    """
+    Clean specified patterns from a source column and store results in a target column.
+
+    Args:
+    df (pd.DataFrame): The DataFrame to process.
+    src_column (str): Name of the source column to clean.
+    target_column (str): Name of the target column to store cleaned results.
+    patterns_to_remove (list): List of substrings or patterns to remove.
+
+    Returns:
+    pd.DataFrame: Updated DataFrame with cleaned target column.
+    """
+    df[target_column] = pandas_series_remove_string_occurrences(df[src_column], patterns_to_remove)
+    return df
+
+def pandas_clean_dataframe_keep_numbers(df: pd.DataFrame, src_column: str, target_column: str) -> pd.DataFrame:
+    """
+    Removes all non-numeric characters from the source column and stores the result in the target column.
+
+    Args:
+    df (pd.DataFrame): The DataFrame to process.
+    src_column (str): Name of the source column to clean.
+    target_column (str): Name of the target column to store cleaned results.
+
+    Returns:
+    pd.DataFrame: Updated DataFrame with only numeric content in the target column.
+    """
+    df[target_column] = pandas_series_keep_only_numbers(df[src_column])
+    return df
 
 ### GEOPANDAS ###
 def spatial_select_geodataframe(gdf: gpd.geodataframe, selection_mask_gdf: gpd.GeoDataFrame,

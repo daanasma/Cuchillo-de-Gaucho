@@ -4,3 +4,5 @@ sqlalchemy
 psycopg2
 polars
 pyarrow
+geoalchemy2
+requests
