@@ -6,3 +6,5 @@ polars
 pyarrow
 geoalchemy2
 requests
+fiona
+shapely

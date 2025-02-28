@@ -7,122 +7,102 @@ import re
 
 from . import geoUtils as geou
 
+
 #### PANDAS #####
 def filter_pandas_df_with_sql(df: pd.DataFrame, sql_query: str) -> pd.DataFrame:
-    """
-    Filter a pandas DataFrame (or GeoDataFrame) using an SQL-like query.
-
-    This function allows you to filter a DataFrame based on a query string written in SQL-like syntax.
-    It uses pandas' built-in `query` method to execute the query and return a subset of the DataFrame
-    that matches the conditions.
-
-    :param df: The pandas DataFrame (or GeoDataFrame) to be filtered.
-    :param sql_query: The SQL-like query to filter the DataFrame. Should follow pandas query syntax.
-    :return: A DataFrame containing only the rows that satisfy the query conditions.
-
-    Logs:
-        INFO log will be generated showing the executed query and the number of rows remaining
-        after filtering.
-    """
-    res_df = df.query(sql_query)
-    logging.info(f"Filtered dataframe with {sql_query}. Remaining: {len(res_df)} rows.")
-    return res_df
-
-
-def pandas_df_to_geodataframe(df, geom_col='geom', crs='EPSG:4326'):
 	"""
-	Convert a DataFrame to a GeoDataFrame.
+	Filter a pandas DataFrame (or GeoDataFrame) using an SQL-like query.
 
-	This function converts a pandas DataFrame with a column containing geometries (as WKT strings or Shapely geometries)
-	into a GeoDataFrame. If the geometries are provided as WKT strings, the function attempts to load them using the
-	`wkt.loads` method. It also handles empty or invalid geometries gracefully.
+	This function allows you to filter a DataFrame based on a query string written in SQL-like syntax.
+	It uses pandas' built-in `query` method to execute the query and return a subset of the DataFrame
+	that matches the conditions.
 
-	:param df: The source DataFrame to be converted into a GeoDataFrame.
-	:param geom_col: The name of the column containing the geometries. Defaults to 'geom'.
-	:param crs: The coordinate reference system to assign to the resulting GeoDataFrame.
-				Defaults to 'EPSG:4326' if not provided.
-	:return: A GeoDataFrame with the geometry column specified.
+	:param df: The pandas DataFrame (or GeoDataFrame) to be filtered.
+	:param sql_query: The SQL-like query to filter the DataFrame. Should follow pandas query syntax.
+	:return: A DataFrame containing only the rows that satisfy the query conditions.
+
+	Logs:
+		INFO log will be generated showing the executed query and the number of rows remaining
+		after filtering.
 	"""
-
-	if geom_col not in df.columns:
-		raise ValueError(f"Geometry column '{geom_col}' not found in DataFrame.")
-
-	# Handle geometry conversion (from WKT strings if necessary)
-
-	df[geom_col] = df[geom_col].apply(geou.safe_wkt_load)
-
-	# Create and return the GeoDataFrame
-	return gpd.GeoDataFrame(df, geometry=geom_col, crs=crs)
+	res_df = df.query(sql_query)
+	logging.info(f"Filtered dataframe with {sql_query}. Remaining: {len(res_df)} rows.")
+	return res_df
 
 
 def filter_pandas_df_is_in(df: pd.DataFrame, attribute: str, range: list):
 	subset = df[df[attribute].isin(range)]
 	return subset
 
+
 def pandas_series_remove_string_occurrences(series: pd.Series, patterns: list) -> pd.Series:
-    """
-    Removes all occurrences of specified patterns from a given pandas Series.
+	"""
+	Removes all occurrences of specified patterns from a given pandas Series.
 
-    Args:
-    series (pd.Series): The Series to clean.
-    patterns (list): A list of substrings or regex patterns to remove.
+	Args:
+	series (pd.Series): The Series to clean.
+	patterns (list): A list of substrings or regex patterns to remove.
 
-    Returns:
-    pd.Series: A cleaned pandas Series.
-    """
-    # Combine all patterns into a single regex pattern
-    combined_pattern = '|'.join(map(re.escape, patterns))
+	Returns:
+	pd.Series: A cleaned pandas Series.
+	"""
+	# Combine all patterns into a single regex pattern
+	combined_pattern = '|'.join(map(re.escape, patterns))
 
-    # Apply regex replacement
-    return series.str.replace(combined_pattern, '', regex=True)
+	# Apply regex replacement
+	return series.str.replace(combined_pattern, '', regex=True)
+
 
 def pandas_series_keep_only_numbers(series: pd.Series) -> pd.Series:
-    """
-    Removes all non-numeric characters from a pandas Series.
+	"""
+	Removes all non-numeric characters from a pandas Series.
 
-    Args:
-    series (pd.Series): The Series to clean.
+	Args:
+	series (pd.Series): The Series to clean.
 
-    Returns:
-    pd.Series: A Series containing only numeric characters.
-    """
-    return series.replace(r'\D+', '', regex=True)  # \D matches any non-digit
+	Returns:
+	pd.Series: A Series containing only numeric characters.
+	"""
+	return series.replace(r'\D+', '', regex=True)  # \D matches any non-digit
 
-def pandas_clean_dataframe_remove_substrings_from_column(df: pd.DataFrame, src_column: str, target_column: str, patterns_to_remove: list) -> pd.DataFrame:
-    """
-    Clean specified patterns from a source column and store results in a target column.
 
-    Args:
-    df (pd.DataFrame): The DataFrame to process.
-    src_column (str): Name of the source column to clean.
-    target_column (str): Name of the target column to store cleaned results.
-    patterns_to_remove (list): List of substrings or patterns to remove.
+def pandas_clean_dataframe_remove_substrings_from_column(df: pd.DataFrame, src_column: str, target_column: str,
+														 patterns_to_remove: list) -> pd.DataFrame:
+	"""
+	Clean specified patterns from a source column and store results in a target column.
 
-    Returns:
-    pd.DataFrame: Updated DataFrame with cleaned target column.
-    """
-    df[target_column] = pandas_series_remove_string_occurrences(df[src_column], patterns_to_remove)
-    return df
+	Args:
+	df (pd.DataFrame): The DataFrame to process.
+	src_column (str): Name of the source column to clean.
+	target_column (str): Name of the target column to store cleaned results.
+	patterns_to_remove (list): List of substrings or patterns to remove.
+
+	Returns:
+	pd.DataFrame: Updated DataFrame with cleaned target column.
+	"""
+	df[target_column] = pandas_series_remove_string_occurrences(df[src_column], patterns_to_remove)
+	return df
+
 
 def pandas_clean_dataframe_keep_numbers(df: pd.DataFrame, src_column: str, target_column: str) -> pd.DataFrame:
-    """
-    Removes all non-numeric characters from the source column and stores the result in the target column.
+	"""
+	Removes all non-numeric characters from the source column and stores the result in the target column.
 
-    Args:
-    df (pd.DataFrame): The DataFrame to process.
-    src_column (str): Name of the source column to clean.
-    target_column (str): Name of the target column to store cleaned results.
+	Args:
+	df (pd.DataFrame): The DataFrame to process.
+	src_column (str): Name of the source column to clean.
+	target_column (str): Name of the target column to store cleaned results.
 
-    Returns:
-    pd.DataFrame: Updated DataFrame with only numeric content in the target column.
-    """
-    df[target_column] = pandas_series_keep_only_numbers(df[src_column])
-    return df
+	Returns:
+	pd.DataFrame: Updated DataFrame with only numeric content in the target column.
+	"""
+	df[target_column] = pandas_series_keep_only_numbers(df[src_column])
+	return df
+
 
 ### GEOPANDAS ###
 def spatial_select_geodataframe(gdf: gpd.geodataframe, selection_mask_gdf: gpd.GeoDataFrame,
 								add_select_attr=False, predicate="within", crs="EPSG:31370", tolerance_m=0.5):
-
 	# Apply a buffer to the selection geometries
 	# Positive buffer for expanding the geometry
 	gdf = gdf.to_crs(crs)
@@ -142,19 +122,74 @@ def spatial_select_geodataframe(gdf: gpd.geodataframe, selection_mask_gdf: gpd.G
 	logging.info(f'Success: got subset, dropped duplicates. size = {len(subset)}')
 	return subset
 
+
 ### POLARS ###
 def polars_add_constant_column(df: pl.DataFrame, column_name: str, value) -> pl.DataFrame:
-    """
-    Adds a column to the Polars DataFrame with a constant value.
+	"""
+	Adds a column to the Polars DataFrame with a constant value.
 
-    Parameters:
-        df (pl.DataFrame): The input Polars DataFrame.
-        column_name (str): The name of the new column to be added.
-        value: The constant value to fill the new column with.
+	Parameters:
+		df (pl.DataFrame): The input Polars DataFrame.
+		column_name (str): The name of the new column to be added.
+		value: The constant value to fill the new column with.
 
-    Returns:
-        pl.DataFrame: A new Polars DataFrame with the added column.
-    """
-    return df.with_columns(
-        pl.lit(value).alias(column_name)
-    )
+	Returns:
+		pl.DataFrame: A new Polars DataFrame with the added column.
+	"""
+	return df.with_columns(
+		pl.lit(value).alias(column_name)
+	)
+
+
+def polars_clean_dataframe_replace_substrings(df: pl.DataFrame, src_column: str, target_column: str,
+											  patterns_dict: dict[str, str]) -> pl.DataFrame:
+	"""
+	Clean specified patterns from a source column based on a dictionary of replacements
+	and store results in a target column.
+
+	Args:
+	df (pl.DataFrame): The DataFrame to process.
+	src_column (str): Name of the source column to clean.
+	target_column (str): Name of the target column to store cleaned results.
+	patterns_dict (dict[str, str]): A dictionary where keys are substrings/patterns to find,
+									and values are the substrings to replace them with.
+									If the value is an empty string, the pattern will de facto be removed.
+
+	Returns:
+	pl.DataFrame: Updated DataFrame with cleaned target column.
+	"""
+	# Start with the source column expression
+	clean_expr = pl.col(src_column)
+	for pattern, replacement in patterns_dict.items():
+		escaped_pattern = re.escape(pattern)
+		clean_expr = clean_expr.str.replace_all(escaped_pattern, replacement)
+
+	return df.with_columns(
+		clean_expr.alias(target_column)
+	)
+
+
+def polars_clean_dataframe_keep_numerical_substrings(df: pl.DataFrame, src_column: str,
+													 target_column: str) -> pl.DataFrame:
+	"""
+	Keep only the numerical substrings from a source column and store the result in a target column.
+
+	Args:
+	df (pl.DataFrame): The DataFrame to process.
+	src_column (str): Name of the source column to extract numerical substrings from.
+	target_column (str): Name of the target column to store results.
+
+	Returns:
+	pl.DataFrame: Updated DataFrame with the target column containing only numerical substrings.
+	"""
+	# Extract all digits from the source column and join them together
+	clean_expr = (
+		pl.col(src_column)
+		.str.extract_all(r'[-+]?(?:\d*\.*\d+)')
+		.list.join(" ")  # Join all matches with a space separator
+		.fill_null("")  # Replace nulls with empty string
+		.alias(target_column)
+	)
+	print(clean_expr)
+
+	return df.with_columns(clean_expr.alias(target_column))

@@ -7,14 +7,18 @@ import os
 import geopandas as gpd
 import pandas as pd
 import polars as pl
+import fiona
 from .decorators import time_function
 
 from sqlalchemy import Engine
 from geoalchemy2 import Geometry, WKTElement
+from shapely.geometry import shape
+from shapely import wkt
 
 import logging
 
-#READING
+
+# READING
 def read_file_to_geodataframe(path: str, driver: str = "ESRI Shapefile") -> gpd.GeoDataFrame:
 	"""
 	Reads a spatial dataset from a path. The default driver is shapefile, but others can be specified.
@@ -63,49 +67,49 @@ def read_csv_to_dataframe(path: str, delimiter: str = ",", dtypes: dict = None) 
 
 
 def read_postgres_to_pandas_df(query: str, engine: Engine) -> pd.DataFrame:
-    """
-    Reads data from a PostgreSQL database into a Pandas DataFrame using an SQLAlchemy engine.
+	"""
+	Reads data from a PostgreSQL database into a Pandas DataFrame using an SQLAlchemy engine.
 
-    Parameters:
-        query (str): The SQL query to execute.
-        engine (Engine): SQLAlchemy engine connected to the database.
+	Parameters:
+		query (str): The SQL query to execute.
+		engine (Engine): SQLAlchemy engine connected to the database.
 
-    Returns:
-        pd.DataFrame: Data fetched from the database as a Pandas DataFrame.
-    """
-    try:
-        # Use the engine to execute the query and load data into a Pandas DataFrame
-        df = pd.read_sql(query, con=engine)
-        logging.info("Query executed and data loaded into Pandas DataFrame.")
-        return df
-    except Exception as e:
-        logging.error(f"Error while fetching data: {e}")
-        raise
+	Returns:
+		pd.DataFrame: Data fetched from the database as a Pandas DataFrame.
+	"""
+	try:
+		# Use the engine to execute the query and load data into a Pandas DataFrame
+		df = pd.read_sql(query, con=engine)
+		logging.info("Query executed and data loaded into Pandas DataFrame.")
+		return df
+	except Exception as e:
+		logging.error(f"Error while fetching data: {e}")
+		raise
 
 
-
-#WRITING
+# WRITING
 @time_function
-def write_pandas_to_postgres(df: pd.DataFrame, table_name: str, schema_name: str, engine: Engine, if_exists: str = 'replace') -> None:
-    """
-    Writes data from a Pandas DataFrame to a PostgreSQL table using an SQLAlchemy engine.
+def write_pandas_to_postgres(df: pd.DataFrame, table_name: str, schema_name: str, engine: Engine,
+							 if_exists: str = 'replace') -> None:
+	"""
+	Writes data from a Pandas DataFrame to a PostgreSQL table using an SQLAlchemy engine.
 
-    Parameters:
-        df (pd.DataFrame): The Pandas DataFrame to be written to the database.
-        schema_name (str): The name of the table to write the data to. (no schema here)
-        table_name (str): The name of the table to write the data to.
-        engine (Engine): SQLAlchemy engine connected to the database.
-        if_exists (str): Action to take if the table already exists.
-                          Options: 'replace', 'append', 'fail'. Default is 'replace'.
-    """
+	Parameters:
+		df (pd.DataFrame): The Pandas DataFrame to be written to the database.
+		schema_name (str): The name of the table to write the data to. (no schema here)
+		table_name (str): The name of the table to write the data to.
+		engine (Engine): SQLAlchemy engine connected to the database.
+		if_exists (str): Action to take if the table already exists.
+						  Options: 'replace', 'append', 'fail'. Default is 'replace'.
+	"""
 
-    try:
-        # Use the engine to write the DataFrame to the PostgreSQL database
-        df.to_sql(table_name, con=engine, schema=schema_name, if_exists=if_exists, index=False, method='multi')
-        logging.info(f"Data successfully written to {table_name} in the database.")
-    except Exception as e:
-        logging.error(f"Error while writing data to {table_name}: {e}")
-        raise
+	try:
+		# Use the engine to write the DataFrame to the PostgreSQL database
+		df.to_sql(table_name, con=engine, schema=schema_name, if_exists=if_exists, index=False, method='multi')
+		logging.info(f"Data successfully written to DB: {schema_name}.{table_name}.")
+	except Exception as e:
+		logging.error(f"Error while writing data to {table_name}: {e}")
+		raise
 
 
 def write_geopandas_to_postgis(
@@ -140,12 +144,10 @@ def write_geopandas_to_postgis(
 	srid = crs.to_epsg()
 	# logging.info(f'crs: {gdf.crs}')
 	gtypes = [geom for geom in gdf.geom_type.unique()]
-	logging.info(
-		"The following geometry types were found in {}: {}".format(table_name, gtypes)
-	)
+	logging.info(f"The following geometry types were found in {table_name}: {gtypes}")
 	gdf["geom"] = gdf[geometry_col].apply(
 		lambda x: WKTElement(x.wkt, srid=srid) if x else None
-	)	# geom_masker = gdf['geometry']
+	)  # geom_masker = gdf['geometry']
 
 	# drop the geometry column as it is now duplicative
 	# gdf.drop('geometry', 1, inplace=True)
@@ -157,11 +159,7 @@ def write_geopandas_to_postgis(
 	# exists = exists if idx == 1 else 'append'
 	# mask = geom_masker.geom_type == gtype
 	gtype = gtypes[0] if len(gtypes) == 1 else "geometry"
-	logging.info(
-		"Using geom type {} and srid {} for {}. Importing {} features".format(
-			gtype, srid, table_name, len(gdf)
-		)
-	)
+	logging.info(f"Using geom type {gtype} and srid {srid} for {table_name}. Importing {len(gdf)} features")
 
 	gdf[wantedcols].to_sql(
 		table_name,
@@ -170,6 +168,7 @@ def write_geopandas_to_postgis(
 		if_exists=if_exists,
 		index=False,
 		dtype={"geom": Geometry(gtype, srid=srid)},
+		chunksize=10000  # Write in manageable chunks
 	)
 	if sindex:
 		with e.connect() as con:
@@ -212,10 +211,10 @@ def ogr_load_data_to_geopackage(ogr_path, geopackage_path, source, lr_name, over
 			"-f", "GPKG",  # Output format
 			"-update",  # Allow updates to the file
 			"-overwrite",  # Append data
-			#"-append",  # Append data
+			# "-append",  # Append data
 			geopackage_path,  # Output GeoPackage
 			source,  # Input Shapefile
-			"-nln", lr_name, # Layer name in the GeoPackage
+			"-nln", lr_name,  # Layer name in the GeoPackage
 			"-lco", "SPATIAL_INDEX=YES"
 		]
 		logging.info(f"Start {ogr2ogr_command}")
@@ -235,6 +234,7 @@ def ogr_load_data_to_postgis(
 		schema_name='public',
 		overwrite=True,
 		source_format=None,
+		target_crs=None
 ):
 	"""
 	Load a spatial dataset into PostGIS using ogr2ogr, supports multiple input file types.
@@ -250,6 +250,7 @@ def ogr_load_data_to_postgis(
 	:param schema: Target schema in PostGIS (optional, defaults to public)
 	:param overwrite: If True, overwrite the target table if it exists
 	:param source_format: Input file format (e.g., 'GPKG', 'ESRI Shapefile'). Auto-detected if None.
+	:param target_crs: Target CRS (e.g. 'EPSG:4326').
 	:return: None
 	"""
 	logging.info("Start loading data to postgres.")
@@ -291,6 +292,8 @@ def ogr_load_data_to_postgis(
 	if source_layer_name:
 		command.append(source_layer_name)
 
+	if target_crs:
+		command.extend(['-t_srs', target_crs])
 	logging.info(command)
 	# Run the command as a subprocess
 	wu.run_subprocess(command)
@@ -313,18 +316,61 @@ def pandas_to_polars(pandas_df):
 	pld = pl.from_pandas(pandas_df)
 	return pld
 
+def pandas_to_geopandas(df, geom_col='geom', crs='EPSG:4326'):
+	"""
+	Convert a DataFrame to a GeoDataFrame.
 
+	This function converts a pandas DataFrame with a column containing geometries (as WKT strings or Shapely geometries)
+	into a GeoDataFrame. If the geometries are provided as WKT strings, the function attempts to load them using the
+	`wkt.loads` method. It also handles empty or invalid geometries gracefully.
+
+	:param df: The source DataFrame to be converted into a GeoDataFrame.
+	:param geom_col: The name of the column containing the geometries. Defaults to 'geom'.
+	:param crs: The coordinate reference system to assign to the resulting GeoDataFrame.
+				Defaults to 'EPSG:4326' if not provided.
+	:return: A GeoDataFrame with the geometry column specified.
+	"""
+
+	if geom_col not in df.columns:
+		raise ValueError(f"Geometry column '{geom_col}' not found in DataFrame.")
+
+	# Handle geometry conversion (from WKT strings if necessary)
+
+	df[geom_col] = df[geom_col].apply(geou.safe_wkt_load)
+
+	# Create and return the GeoDataFrame
+	return gpd.GeoDataFrame(df, geometry=geom_col, crs=crs)
+
+
+
+def geopandas_to_polars(geopandas_gdf, geom_col: str = "geometry"):
+	"""
+	Reads a spatial dataset from a path into a GeoDataFrame, then converts it to a Polars DataFrame.
+	The geometry column is converted to WKT format.
+
+	:param geopandas_gdf: The geopandas dataframe
+	:param geom_col: The name of the geometry column to be created in the DataFrame (default is "geometry")
+	:returns: A Polars DataFrame with properties and geometry in WKT format
+	"""
+
+	# Convert the geometry column to WKT
+	geopandas_gdf[geom_col] = geopandas_gdf[geom_col].apply(lambda geom: geom.wkt if geom is not None else None)
+
+	# Convert GeoDataFrame to Polars DataFrame
+	pl_df = pandas_to_polars(geopandas_gdf)
+
+	return pl_df
 @time_function
 def polars_to_pandas(polars_df):
-    """
-    Converts a Polars DataFrame to a Pandas DataFrame.
+	"""
+	Converts a Polars DataFrame to a Pandas DataFrame.
 
-    Parameters:
-        polars_df (polars.DataFrame): Input Polars DataFrame.
+	Parameters:
+		polars_df (polars.DataFrame): Input Polars DataFrame.
 
-    Returns:
-        pandas.DataFrame: Converted Pandas DataFrame.
-    """
-    logging.info(f"Start converting polars to pandas. n={len(polars_df)} rows.")
-    pdf = polars_df.to_pandas()
-    return pdf
+	Returns:
+		pandas.DataFrame: Converted Pandas DataFrame.
+	"""
+	logging.info(f"Start converting polars to pandas. n={len(polars_df)} rows.")
+	pdf = polars_df.to_pandas()
+	return pdf

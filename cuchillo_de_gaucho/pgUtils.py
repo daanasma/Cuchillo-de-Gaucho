@@ -1,7 +1,7 @@
 from sqlalchemy import Engine, create_engine, text
 from .decorators import time_function
 import logging
-import re
+import re, os
 from typing import Union, List
 
 def make_connection_string_postgres( db_name: str, user: str, password: str, host: str, port: int = 5432 ) -> str:
@@ -77,6 +77,7 @@ def execute_postgres_query(e: Engine, q: Union[str, List[str]]):
         logging.info("All queries executed successfully and transaction committed.")
 
         return results  # Return the collected results
+
     except Exception as e:
         # Rollback transaction in case of an error
         trans.rollback()
@@ -87,6 +88,24 @@ def execute_postgres_query(e: Engine, q: Union[str, List[str]]):
         # Ensure that the connection is properly closed
         connection.close()
         logging.info("Connection closed.")
+
+def execute_postgres_query_from_file(engine, query_file_path):
+    """
+    Reads a SQL query from the specified file and executes it.
+
+    Parameters:
+    - engine: SQLAlchemy engine or connection
+    - query_file_path: Full path to the SQL file
+    """
+    if not os.path.exists(query_file_path):
+        raise FileNotFoundError(f"SQL file not found: {query_file_path}")
+
+    # Read the SQL query from the file
+    with open(query_file_path, "r", encoding="utf-8") as sql_file:
+        query_string = sql_file.read()
+
+    # Execute the query
+    return execute_postgres_query(engine, q=query_string)
 
 def get_table_names_matching_wildcard(engine, schema, wildcard):
     """

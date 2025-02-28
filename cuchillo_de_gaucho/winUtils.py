@@ -27,15 +27,17 @@ def read_dict_from_json(json_file: str):
 	return json_dict
 
 ## Directory ops
-def create_folder_if_not_exists(path: str):
+def create_folder_if_not_exists(path: str, exists_ok: bool=True
+								):
     """
     Create a folder and any necessary parent folders if they do not exist.
 
     Args:
     path (str): The path to check and create if necessary.
+    exists_ok (bool): If this flag is true, it will also create the non-existing sub folders.
     """
     try:
-        os.makedirs(path, exist_ok=True)
+        os.makedirs(path, exist_ok=exists_ok)
         logging.info(f"Created folder (or already exists): {path}")
     except OSError as e:
         logging.error(f"Error creating directory {path}: {e}")

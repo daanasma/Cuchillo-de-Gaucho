@@ -9,7 +9,9 @@ setup(
                       'geoalchemy2',
                       'psycopg2',
                       'polars',
-                      'pyarrow'],  # List any dependencies here
+                      'pyarrow',
+                      'fiona',
+                      'shapely'],  # List any dependencies here
     author="Daan Asma",
     author_email="nope",
     description="A collection of useful utility functions.", 

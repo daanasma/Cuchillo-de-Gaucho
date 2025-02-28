@@ -39,3 +39,23 @@ def setup_logging(default_level=logging.INFO, env_key="LOG_CONFIG"):
         logging.info("Logging Config path not found - using basic setup")
 
 
+def override_stream_log_level(new_level):
+    """
+    Temporarily override the log level of the StreamHandler (console logger).
+
+    Args:
+        new_level (int): The new logging level (e.g., logging.DEBUG).
+
+    Usage:
+        override_stream_log_level(logging.DEBUG)
+        # Your debug-level code here
+        override_stream_log_level(logging.INFO)  # Restore manually if desired
+    """
+    logger = logging.getLogger()
+    original_level = None
+
+    for handler in logger.handlers:
+        if isinstance(handler, logging.StreamHandler):
+            handler.setLevel(new_level)
+            logging.info(f"Console log level changed to: {logging.getLevelName(new_level)}")
+            break
