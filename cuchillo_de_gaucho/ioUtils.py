@@ -347,6 +347,7 @@ def pandas_to_polars(pandas_df):
 	pld = pl.from_pandas(pandas_df)
 	return pld
 
+@time_function
 def pandas_to_geopandas(df, geom_col='geom', crs='EPSG:4326'):
 	"""
 	Convert a DataFrame to a GeoDataFrame.
@@ -361,7 +362,6 @@ def pandas_to_geopandas(df, geom_col='geom', crs='EPSG:4326'):
 				Defaults to 'EPSG:4326' if not provided.
 	:return: A GeoDataFrame with the geometry column specified.
 	"""
-
 	if geom_col not in df.columns:
 		raise ValueError(f"Geometry column '{geom_col}' not found in DataFrame.")
 
@@ -371,7 +371,6 @@ def pandas_to_geopandas(df, geom_col='geom', crs='EPSG:4326'):
 
 	# Create and return the GeoDataFrame
 	return gpd.GeoDataFrame(df, geometry=geom_col, crs=crs)
-
 
 
 def geopandas_to_polars(geopandas_gdf, geom_col: str = "geometry"):
