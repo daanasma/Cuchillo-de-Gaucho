@@ -19,9 +19,9 @@ def make_connection_string_postgres( db_name: str, user: str, password: str, hos
     if dialect == 'ogr2ogr':
         connection_string = f'''PG:dbname='{db_name}' host='{host}' port='{port}' user='{user}' password='{password}' '''
     elif dialect == 'sqlalchemy':
-        connection_string = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}"
+        connection_string = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db_name}"
     elif dialect == 'connectorx':
-        connection_string = f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
+        connection_string = f"postgresql://{user}:{password}@{host}:{port}/{db_name}"
     return connection_string
 
 def connect_postgres_database(user: str, password: str, host: str, port:str, dbname: str) -> Engine:
