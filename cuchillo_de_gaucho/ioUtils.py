@@ -198,27 +198,58 @@ def write_geopandas_to_file(gdf: gpd.GeoDataFrame, foldername: str, layername: s
 	logging.info("Successfully wrote spatial dataframe")
 
 
-def ogr_load_data_to_geopackage(ogr_path, geopackage_path, source, lr_name, overwrite=True):
+def ogr_load_data_to_geopackage(ogr_path, geopackage_path, source_path, source_type, layer_name=None, connection_string=None,
+								overwrite=True):
+	"""
+    Load a spatial dataset into a GeoPackage using ogr2ogr, supporting multiple input types.
+
+    :param ogr_path: Path to the ogr2ogr executable
+    :param geopackage_path: Path to the target GeoPackage file
+    :param source_path: Path to the input spatial data (e.g., Shapefile, GeoJSON, GeoPackage) or "schema.table" for PostGIS
+    :param source_type: Type of input data ("shapefile", "geopackage", "geojson", "postgis")
+    :param layer_name: Name of the layer in the GeoPackage (will match table name for PostGIS)
+    :param connection_string: PostGIS connection string (required if source_type is "postgis")
+    :param overwrite: Whether to overwrite the existing layer in the GeoPackage (default: True)$
+    	"""
+	__default_schema_if_postgis = 'public'
 	features_in_geopackage_path = []
 	if not overwrite and os.path.exists(geopackage_path):
 		features_in_geopackage_path = geou.list_all_features_in_geopackage_sqlite(geopackage_path)
 
-	if (not overwrite and lr_name in features_in_geopackage_path):
-		logging.warning(f"Not loading {lr_name} because it already exists in target geopackage")
+
+	# Determine source parameter based on type
+	if source_type == "postgis":
+		if not connection_string:
+			raise ValueError("PostGIS connection string must be provided when source_type is 'postgis'")
+		source = connection_string
+		schema, table_name = source_path.split(".", 1) if "." in source_path else (__default_schema_if_postgis, source_path)
+		layer_name = layer_name or table_name  # Default to table name if not provided		source = connection_string
+		sql_query = f"SELECT * FROM {schema}.{table_name}"
+
+	elif source_type in ["shapefile", "geopackage", "geojson"]:
+		source = source_path
 	else:
-		ogr2ogr_command = [
-			ogr_path,  # Path to ogr2ogr
-			"-f", "GPKG",  # Output format
-			"-update",  # Allow updates to the file
-			"-overwrite",  # Append data
-			# "-append",  # Append data
-			geopackage_path,  # Output GeoPackage
-			source,  # Input Shapefile
-			"-nln", lr_name,  # Layer name in the GeoPackage
-			"-lco", "SPATIAL_INDEX=YES"
-		]
-		logging.info(f"Start {ogr2ogr_command}")
-		wu.run_subprocess(ogr2ogr_command)
+		raise ValueError(f"Unsupported source_type: {source_type}")
+
+	if not overwrite and layer_name in features_in_geopackage_path:
+		logging.warning(f"Not loading {layer_name} because it already exists in target geopackage")
+		return
+	ogr2ogr_command = [
+		ogr_path,
+		"-f", "GPKG",
+		"-update",
+		"-overwrite" if overwrite else "-append",
+		geopackage_path,
+		source,
+		"-nln", layer_name,
+		"-lco", "SPATIAL_INDEX=YES"
+	]
+
+	if source_type == "postgis":
+		ogr2ogr_command.extend(["-sql", sql_query])
+
+	logging.info(f"Start {ogr2ogr_command}")
+	wu.run_subprocess(ogr2ogr_command)
 
 
 def ogr_load_data_to_postgis(

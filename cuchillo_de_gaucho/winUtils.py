@@ -6,7 +6,7 @@ import shutil
 
 def run_subprocess(command_list):
 	try:
-		logging.info("Start running subprocess!")
+		logging.info(f"Start running subprocess! {command_list}")
 		subprocess.run(command_list, check=True)
 		logging.info("Finished running subprocess!")
 	except subprocess.CalledProcessError as e:
