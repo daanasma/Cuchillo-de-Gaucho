@@ -4,7 +4,7 @@ import logging
 import re, os
 from typing import Union, List
 
-def make_connection_string_postgres( db_name: str, user: str, password: str, host: str, port: int = 5432 ) -> str:
+def make_connection_string_postgres( db_name: str, user: str, password: str, host: str, port: int = 5432, dialect='ogr2ogr') -> str:
     """
     Creates a PostgreSQL/PostGIS connection string for use with ogr2ogr or similar tools.
 
@@ -13,11 +13,15 @@ def make_connection_string_postgres( db_name: str, user: str, password: str, hos
     :param password: PostgreSQL password
     :param host: PostgreSQL host (default: 'localhost')
     :param port: PostgreSQL port (default: 5432)
+    :param dialect: Dialect to create the postgres connection string
     :return: A formatted connection string for PostgreSQL/PostGIS
     """
-    connection_string = f'''PG:dbname='{db_name}' host='{host}' port='{port}' user='{user}' password='{password}' '''
-
-    print(connection_string)
+    if dialect == 'ogr2ogr':
+        connection_string = f'''PG:dbname='{db_name}' host='{host}' port='{port}' user='{user}' password='{password}' '''
+    elif dialect == 'sqlalchemy':
+        connection_string = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}"
+    elif dialect == 'connectorx':
+        connection_string = f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
     return connection_string
 
 def connect_postgres_database(user: str, password: str, host: str, port:str, dbname: str) -> Engine:
@@ -31,10 +35,9 @@ def connect_postgres_database(user: str, password: str, host: str, port:str, dbn
     :param dbname: The name f the database to be created
     :return: A sqlalchemy engine for the database
     """
-    e = create_engine(
-        f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}"
-    )
-    logging.info(f"Succesfullly created engine to database {dbname}")
+    conn_string = make_connection_string_postgres(dbname, user, password, host, port, dialect='sqlalchemy')
+    e = create_engine(conn_string)
+    logging.info(f"Succesfullly created engine to database {dbname} for user {user}.")
     return e
 
 @time_function
