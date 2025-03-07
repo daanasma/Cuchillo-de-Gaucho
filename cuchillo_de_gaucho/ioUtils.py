@@ -407,7 +407,7 @@ def polars_to_pandas(polars_df):
 
 @time_function
 def polars_to_geoparquet(polars_df, geoparquet_path: str, geom_col: str = "geometry", crs: str = config.DEFAULT_CRS):
-	logging.info(f"Start converting polars to geoparquet. n={len(polars_df)} rows.")
+	logging.info(f"Start converting polars to geoparquet. n={len(polars_df)} rows. crs = {crs}")
 	pdf = polars_to_pandas(polars_df)
 	pdf_geo = pandas_to_geopandas(pdf, geom_col, crs)
 	pdf_geo.to_parquet(geoparquet_path)
