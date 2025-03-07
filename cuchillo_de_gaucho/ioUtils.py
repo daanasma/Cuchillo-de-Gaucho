@@ -2,7 +2,7 @@ from . import winUtils as wu
 from . import geoUtils as geou
 from . import pathUtils as pu
 from . import pgUtils as pgu
-
+from . import config
 import os
 import geopandas as gpd
 import pandas as pd
@@ -348,7 +348,7 @@ def pandas_to_polars(pandas_df):
 	return pld
 
 @time_function
-def pandas_to_geopandas(df, geom_col='geom', crs='EPSG:4326'):
+def pandas_to_geopandas(df, geom_col='geom', crs=config.DEFAULT_CRS):
 	"""
 	Convert a DataFrame to a GeoDataFrame.
 
@@ -404,3 +404,10 @@ def polars_to_pandas(polars_df):
 	logging.info(f"Start converting polars to pandas. n={len(polars_df)} rows.")
 	pdf = polars_df.to_pandas()
 	return pdf
+
+@time_function
+def polars_to_geoparquet(polars_df, geoparquet_path: str, geom_col: str = "geometry", crs: str = config.DEFAULT_CRS):
+	logging.info(f"Start converting polars to geoparquet. n={len(polars_df)} rows.")
+	pdf = polars_to_pandas(polars_df)
+	pdf_geo = pandas_to_geopandas(pdf, geom_col, crs)
+	pdf_geo.to_parquet(geoparquet_path)

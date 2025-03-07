@@ -3,3 +3,5 @@ EXTERNAL_ENDPOINTS = {
 		'aiv_adresmatch': 'https://api.basisregisters.vlaanderen.be/v2/adresmatch'
 			}
 }
+
+DEFAULT_CRS = 'EPSG:4326'
