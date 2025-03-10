@@ -3,6 +3,7 @@ import subprocess
 import logging
 import json
 import shutil
+import config
 
 def run_subprocess(command_list):
 	try:
@@ -19,6 +20,36 @@ def write_dict_to_json(file_path: str, dictionary: dict):
 			json.dump(dictionary, outfile)
 	except Exception as e:
 		logging.info(f"Failed writing to file {file_path}. error message: {e}")
+
+
+def create_encrypted_7z(zip_path, files, password=None, sevenzip_path=config.DEFAULT_SEVENZIP_PATH):
+	"""
+	Creates a 7z archive with optional password protection using 7-Zip.
+
+	Args:
+		zip_path (str): Path to the output 7z archive (e.g., "output.7z").
+		files (list): List of file paths to include in the archive.
+		password (str, optional): Password for encryption. If None, no password is set.
+		sevenzip_path (str, optional): Path to 7z.exe. Defaults to the value provided in the project config.
+
+	Raises:
+		FileNotFoundError: If 7-Zip is not installed at the specified path.
+		subprocess.CalledProcessError: If the 7z command fails.
+	"""
+
+	# Check if 7-Zip exists
+	if not os.path.exists(sevenzip_path):
+		raise FileNotFoundError(f"Error: 7-Zip not found at {sevenzip_path}. Please install 7-Zip or update the path.")
+
+	# Base command
+	command = [sevenzip_path, 'a', zip_path, '-mhe=on'] + files
+
+	# Add password only if provided
+	if password:
+		command.insert(3, f'-p{password}')  # Insert after 'a'
+
+	# Run the 7-Zip command
+	run_subprocess(command)
 
 
 def read_dict_from_json(json_file: str):
