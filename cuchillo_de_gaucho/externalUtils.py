@@ -1,6 +1,6 @@
 import requests
 from . import winUtils as wu
-from . import config
+from . import packageConfig
 
 #todo fix  :)
 class Geocoder():

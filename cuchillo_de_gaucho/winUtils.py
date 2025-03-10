@@ -3,7 +3,7 @@ import subprocess
 import logging
 import json
 import shutil
-import config
+from . import packageConfig
 
 def run_subprocess(command_list):
 	try:
@@ -22,7 +22,7 @@ def write_dict_to_json(file_path: str, dictionary: dict):
 		logging.info(f"Failed writing to file {file_path}. error message: {e}")
 
 
-def create_encrypted_7z(zip_path, files, password=None, sevenzip_path=config.DEFAULT_SEVENZIP_PATH):
+def create_encrypted_7z(zip_path, files, password=None, sevenzip_path=packageConfig.DEFAULT_SEVENZIP_PATH):
 	"""
 	Creates a 7z archive with optional password protection using 7-Zip.
 
@@ -35,14 +35,27 @@ def create_encrypted_7z(zip_path, files, password=None, sevenzip_path=config.DEF
 	Raises:
 		FileNotFoundError: If 7-Zip is not installed at the specified path.
 		subprocess.CalledProcessError: If the 7z command fails.
+		ValueError: If any file does not exist.
 	"""
 
 	# Check if 7-Zip exists
 	if not os.path.exists(sevenzip_path):
 		raise FileNotFoundError(f"Error: 7-Zip not found at {sevenzip_path}. Please install 7-Zip or update the path.")
-
+	# Ensure all files exist
+	for file in files:
+		if not os.path.exists(file):
+			raise ValueError(f"Error: File not found - {file}")
 	# Base command
-	command = [sevenzip_path, 'a', zip_path, '-mhe=on'] + files
+	# Check the extension and adjust the command
+	file_extension = os.path.splitext(zip_path)[1].lower()
+	if file_extension == '.7z':
+		# .7z archive with AES-256 encryption
+		command = [sevenzip_path, 'a', zip_path, '-mhe=on'] + files
+	elif file_extension == '.zip':
+		# .zip archive with AES-256 encryption
+		command = [sevenzip_path, 'a', zip_path, '-tzip', '-mem=AES256'] + files
+	else:
+		raise ValueError(f"Error: Unsupported file extension '{file_extension}'. Use .7z or .zip.")
 
 	# Add password only if provided
 	if password:
@@ -103,3 +116,5 @@ def delete_path(path: str):
     else:
         logging.warning("No object found to remove at path %s", path)
 
+if __name__ == '__main__':
+    print('joey')
