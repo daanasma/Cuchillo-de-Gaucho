@@ -45,10 +45,11 @@ def release_all_active_db_connections(engine):
     db_name = make_url(engine.url).database # Get database name from the connection engine
     query = f"""SELECT pg_terminate_backend(pid)
     FROM pg_stat_activity
-    WHERE datname = {db_name}
+    WHERE datname = '{db_name}'
     AND pid <> pg_backend_pid();  -- Prevent killing your own session
     """
     execute_postgres_query(engine, query)
+    logging.info(f"Terminated all active sesions on database: {db_name}")
 @time_function
 def execute_postgres_query(e: Engine, q: Union[str, List[str]]):
     """
