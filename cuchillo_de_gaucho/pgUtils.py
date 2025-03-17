@@ -48,7 +48,7 @@ def release_all_active_db_connections(engine):
     WHERE datname = {db_name}
     AND pid <> pg_backend_pid();  -- Prevent killing your own session
     """
-    execute_postgres_query_from_file(engine, query)
+    execute_postgres_query(engine, query)
 @time_function
 def execute_postgres_query(e: Engine, q: Union[str, List[str]]):
     """
