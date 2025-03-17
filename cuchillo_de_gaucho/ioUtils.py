@@ -223,11 +223,14 @@ def ogr_load_data_to_geopackage(ogr_path, geopackage_path, source_path, source_t
 			raise ValueError("PostGIS connection string must be provided when source_type is 'postgis'")
 		source = connection_string
 		schema, table_name = source_path.split(".", 1) if "." in source_path else (__default_schema_if_postgis, source_path)
-		layer_name = layer_name or table_name  # Default to table name if not provided		source = connection_string
+		layer_name = layer_name or table_name  # Default to table name if not provided
 		sql_query = f"SELECT * FROM {schema}.{table_name}"
 
 	elif source_type in ["shapefile", "geopackage", "geojson"]:
 		source = source_path
+		if not layer_name:
+			layer_name = os.path.basename(source).split(".")[0]
+
 	else:
 		raise ValueError(f"Unsupported source_type: {source_type}")
 

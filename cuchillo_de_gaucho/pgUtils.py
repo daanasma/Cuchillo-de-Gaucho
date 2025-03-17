@@ -1,4 +1,5 @@
 from sqlalchemy import Engine, create_engine, text
+from sqlalchemy.engine.url import make_url
 from .decorators import time_function
 import logging
 import re, os
@@ -40,6 +41,14 @@ def connect_postgres_database(user: str, password: str, host: str, port:str, dbn
     logging.info(f"Succesfullly created engine to database {dbname} for user {user}.")
     return e
 
+def release_all_active_db_connections(engine):
+    db_name = make_url(engine.url).database # Get database name from the connection engine
+    query = f"""SELECT pg_terminate_backend(pid)
+    FROM pg_stat_activity
+    WHERE datname = {db_name}
+    AND pid <> pg_backend_pid();  -- Prevent killing your own session
+    """
+    execute_postgres_query_from_file(engine, query)
 @time_function
 def execute_postgres_query(e: Engine, q: Union[str, List[str]]):
     """
