@@ -197,3 +197,33 @@ def sql_gen_convert_wkt_to_geom(table_to_update: str, wkt_col: str, geometry_col
         """
     return sql
 
+
+def sql_gen_remove_records_from_table(table_to_update: str, field_to_filter: str, values_to_remove: set) -> str:
+    """
+    Generate a single SQL statement to remove records from a table based on a set of values.
+    Uses a temporary table for better performance with large datasets.
+
+    :param table_to_update: Name of the table to update.
+    :param field_to_filter: Column name to filter records by.
+    :param values_to_remove: Set of values to remove.
+    :return: SQL statement as a single string.
+    """
+
+    if not values_to_remove:
+        return ""  # No values to remove, return empty string
+
+    values_sql = ",\n        ".join(f"('{val}')" for val in values_to_remove)
+
+    sql_statement = f"""
+        CREATE TEMP TABLE temp_values_to_remove (value_to_remove TEXT PRIMARY KEY);
+
+        INSERT INTO temp_values_to_remove (value_to_remove) VALUES
+        {values_sql};
+
+        DELETE FROM {table_to_update}
+        WHERE {field_to_filter} IN (SELECT value_to_remove FROM temp_values_to_remove);
+
+        DROP TABLE temp_values_to_remove;
+    """
+
+    return sql_statement
