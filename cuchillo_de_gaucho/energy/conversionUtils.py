@@ -2,7 +2,7 @@
 
 
 def kilo_to_giga(kilo: float) -> float:
-    return kilo / 1000000
+    return kilo / 1_000_000
 
 
 def gwh_to_tj(gwh: float) -> float:
