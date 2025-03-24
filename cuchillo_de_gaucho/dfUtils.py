@@ -164,7 +164,9 @@ def polars_classify_column(df: pl.DataFrame, col_name: str, ranges: dict, new_co
             expr = expr.when(condition).then(label)
 
     expr = expr.otherwise("Unknown").alias(new_col_name)
-    return df.with_columns(expr)def polars_clean_dataframe_replace_substrings(df: pl.DataFrame, src_column: str, target_column: str,
+    return df.with_columns(expr)
+
+def polars_clean_dataframe_replace_substrings(df: pl.DataFrame, src_column: str, target_column: str,
 											  patterns_dict: dict[str, str]) -> pl.DataFrame:
 	"""
 	Clean specified patterns from a source column based on a dictionary of replacements
