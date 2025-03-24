@@ -12,9 +12,3 @@ def generate_zero_based_index(num, length=3):
     """
     return str(num).zfill(length)
 
-
-def classify_value(value, classification_dict):
-    for label, (lower, upper) in classification_dict.items():
-        if lower <= value < upper:
-            return label
-    return None  # If no classification fits, return None

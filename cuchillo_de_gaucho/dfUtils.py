@@ -161,9 +161,9 @@ def polars_classify_column(df: pl.DataFrame, col_name: str, ranges: dict, new_co
             if lower <= value < upper:
                 return label
         return None  # If no classification fits, return None
-    df = df.with_columns([
-    pl.col(col_name).map(classify_value).alias(new_col_name)
-    ])
+    df = df.with_columns((
+        pl.col(col_name).map_elements(classify_value).alias(new_col_name)
+    ))
     if drop_input_col:
         df = df.drop(col_name)
     return df
