@@ -140,8 +140,31 @@ def polars_add_constant_column(df: pl.DataFrame, column_name: str, value) -> pl.
 		pl.lit(value).alias(column_name)
 	)
 
+def polars_classify_column(df: pl.DataFrame, col_name: str, ranges: dict, new_col_name: str) -> pl.DataFrame:
+    """
+    Classify values in a Polars DataFrame based on predefined ranges.
 
-def polars_clean_dataframe_replace_substrings(df: pl.DataFrame, src_column: str, target_column: str,
+	This function assigns category labels to values in a specified column based on a dictionary of range boundaries.
+	It dynamically constructs a `when-then-otherwise` expression in Polars to apply the classification.
+
+	:param df: The Polars DataFrame to process.
+	:param col_name: The name of the source column containing numeric values.
+	:param ranges: A dictionary where keys are category labels and values are (min, max) tuples defining range boundaries.
+	:param new_col_name: The name of the target column to store the classified results.
+	:return: A Polars DataFrame with a new column containing the classified values.
+
+    """
+
+    expr = None
+    for label, (low, high) in ranges.items():
+        condition = (pl.col(col_name) >= low) & (pl.col(col_name) < high)
+        if expr is None:
+            expr = pl.when(condition).then(label)
+        else:
+            expr = expr.when(condition).then(label)
+
+    expr = expr.otherwise("Unknown").alias(new_col_name)
+    return df.with_columns(expr)def polars_clean_dataframe_replace_substrings(df: pl.DataFrame, src_column: str, target_column: str,
 											  patterns_dict: dict[str, str]) -> pl.DataFrame:
 	"""
 	Clean specified patterns from a source column based on a dictionary of replacements
