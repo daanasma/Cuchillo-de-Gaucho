@@ -155,11 +155,15 @@ def polars_classify_column(df: pl.DataFrame, col_name: str, ranges: dict, new_co
     :return: A Polars DataFrame with a new column containing the classified values.
 
     """
-
-    df = df.with_columns(
-        (hu.classify_value(pl.col(col_name), ranges))
-		.alias(new_col_name)
-    )
+    def classify_value(value):
+        # This function has access to the classification_dict in the namespace
+        for label, (lower, upper) in ranges.items():
+            if lower <= value < upper:
+                return label
+        return None  # If no classification fits, return None
+    df = df.with_columns([
+    pl.col(col_name).map(classify_value).alias(new_col_name)
+    ])
     if drop_input_col:
         df = df.drop(col_name)
     return df
