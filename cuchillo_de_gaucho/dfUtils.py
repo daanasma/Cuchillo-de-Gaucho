@@ -157,7 +157,8 @@ def polars_classify_column(df: pl.DataFrame, col_name: str, ranges: dict, new_co
     """
 
     df = df.with_columns(
-        pl.col(col_name).apply(lambda x: hu.classify_value(x, ranges)).alias(new_col_name)
+        (hu.classify_value(pl.col(col_name), ranges))
+		.alias(new_col_name)
     )
     if drop_input_col:
         df = df.drop(col_name)
