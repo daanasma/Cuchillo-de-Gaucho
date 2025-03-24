@@ -154,19 +154,23 @@ def polars_classify_column(df: pl.DataFrame, col_name: str, ranges: dict, new_co
     :return: A Polars DataFrame with a new column containing the classified values.
 
     """
-    conditions = [
-        (
-            (pl.col(col_name) >= low) & (pl.col(col_name) < high),
-            pl.lit(label)
-        )
-        for label, (low, high) in ranges.items()
-    ]
+    first_range_label, (first_low, first_high) = next(iter(ranges.items()))
+    expr = pl.when(
+        (pl.col(col_name) >= first_low) & (pl.col(col_name) < first_high)
+    ).then(first_range_label)
 
-    # Use pl.switch to handle multiple conditions
-    expr = pl.switch(*conditions).otherwise("Unknown").alias(new_col_name)
+    # Add subsequent conditions
+    for label, (low, high) in list(ranges.items())[1:]:
+        expr = expr.when(
+            (pl.col(col_name) >= low) & (pl.col(col_name) < high)
+        ).then(label)
+
+    # Add otherwise clause
+    expr = expr.otherwise("Unknown").alias(new_col_name)
 
     # Return dataframe with new column
     return df.with_columns(expr)
+
 def polars_clean_dataframe_replace_substrings(df: pl.DataFrame, src_column: str, target_column: str,
                                               patterns_dict: dict[str, str]) -> pl.DataFrame:
     """
