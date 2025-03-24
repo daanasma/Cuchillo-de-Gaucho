@@ -6,6 +6,7 @@ import logging
 import re
 
 from . import geoUtils as geou
+from . import helperUtils as hu
 
 
 #### PANDAS #####
@@ -140,7 +141,7 @@ def polars_add_constant_column(df: pl.DataFrame, column_name: str, value) -> pl.
         pl.lit(value).alias(column_name)
     )
 
-def polars_classify_column(df: pl.DataFrame, col_name: str, ranges: dict, new_col_name: str) -> pl.DataFrame:
+def polars_classify_column(df: pl.DataFrame, col_name: str, ranges: dict, new_col_name: str, drop_input_col=True) -> pl.DataFrame:
     """
     Classify values in a Polars DataFrame based on predefined ranges.
 
@@ -154,26 +155,14 @@ def polars_classify_column(df: pl.DataFrame, col_name: str, ranges: dict, new_co
     :return: A Polars DataFrame with a new column containing the classified values.
 
     """
-    if not ranges:
-        raise ValueError("Ranges dictionary cannot be empty")
 
-    # Create list of conditions
-    conditions = []
-    for label, (low, high) in ranges.items():
-        conditions.append(
-            pl.col(col_name).is_between(low, high, closed="left").then(label)
-        )
+    df = df.with_columns(
+        pl.col(col_name).apply(lambda x: hu.classify_value(x, ranges)).alias(new_col_name)
+    )
+    if drop_input_col:
+        df = df.drop(col_name)
+    return df
 
-    # Combine conditions with fallback
-    expr = pl.when(conditions[0])
-    for condition in conditions[1:]:
-        expr = expr.when(condition)
-
-    # Add otherwise clause and alias
-    expr = expr.otherwise("Unknown").alias(new_col_name)
-
-    # Return dataframe with new column
-    return df.with_columns(expr)
 def polars_clean_dataframe_replace_substrings(df: pl.DataFrame, src_column: str, target_column: str,
                                               patterns_dict: dict[str, str]) -> pl.DataFrame:
     """
