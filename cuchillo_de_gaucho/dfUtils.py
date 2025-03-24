@@ -152,6 +152,7 @@ def polars_classify_column(df: pl.DataFrame, col_name: str, ranges: dict, new_co
     :param col_name: The name of the source column containing numeric values.
     :param ranges: A dictionary where keys are category labels and values are (min, max) tuples defining range boundaries.
     :param new_col_name: The name of the target column to store the classified results.
+    :param drop_input_col: If true, the input column will be dropped from the result dataframe.
     :return: A Polars DataFrame with a new column containing the classified values.
 
     """
@@ -161,11 +162,14 @@ def polars_classify_column(df: pl.DataFrame, col_name: str, ranges: dict, new_co
             if lower <= value < upper:
                 return label
         return None  # If no classification fits, return None
+
     df = df.with_columns((
         pl.col(col_name).map_elements(classify_value).alias(new_col_name)
     ))
+
     if drop_input_col:
         df = df.drop(col_name)
+
     return df
 
 def polars_clean_dataframe_replace_substrings(df: pl.DataFrame, src_column: str, target_column: str,
