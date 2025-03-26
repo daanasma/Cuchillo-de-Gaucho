@@ -102,8 +102,8 @@ def pandas_clean_dataframe_keep_numbers(df: pd.DataFrame, src_column: str, targe
 
 
 ### GEOPANDAS ###
-def spatial_select_geodataframe(gdf: gpd.geodataframe, selection_mask_gdf: gpd.GeoDataFrame,
-                                add_select_attr=False, predicate="within", crs="EPSG:31370", tolerance_m=0.5):
+def geopandas_spatial_select(gdf: gpd.geodataframe, selection_mask_gdf: gpd.GeoDataFrame,
+                             add_select_attr=False, predicate="within", crs="EPSG:31370", tolerance_m=0.5):
     # Apply a buffer to the selection geometries
     # Positive buffer for expanding the geometry
     gdf = gdf.to_crs(crs)
@@ -123,6 +123,25 @@ def spatial_select_geodataframe(gdf: gpd.geodataframe, selection_mask_gdf: gpd.G
     logging.info(f'Success: got subset, dropped duplicates. size = {len(subset)}')
     return subset
 
+def geopandas_add_zone_attribute_to_points(points_gdf: gpd.GeoDataFrame, regions_gdf: gpd.GeoDataFrame, region_col: str, new_col_name: str) -> gpd.GeoDataFrame:
+    """
+    Perform a spatial join to classify points based on given regions.
+
+    This function takes a GeoDataFrame of points and assigns a region identifier
+    by performing a spatial join with a GeoDataFrame containing polygon geometries.
+
+    :param points_gdf: The GeoDataFrame containing point geometries.
+    :param regions_gdf: The GeoDataFrame containing administrative boundaries.
+    :param region_col: The column name in regions_gdf that contains the region identifier.
+    :param new_col_name: The name of the new column to store the region classification.
+    :return: A GeoDataFrame with the assigned region ID.
+    """
+
+    # Perform spatial join
+    joined_gdf = gpd.sjoin(points_gdf, regions_gdf[[region_col, "geometry"]], predicate="within", how="left")
+
+    # Keep relevant columns and rename the region column
+    return joined_gdf.drop(columns=["index_right"]).rename(columns={region_col: new_col_name})
 
 ### POLARS ###
 def polars_add_constant_column(df: pl.DataFrame, column_name: str, value) -> pl.DataFrame:
