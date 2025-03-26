@@ -39,7 +39,6 @@ def read_file_to_geodataframe(path: str, driver: str = "ESRI Shapefile") -> gpd.
 	logging.info(f"Finished reading spatial dataframe {layername}. size = {len(gdf)}")
 	return gdf
 
-
 def read_csv_to_dataframe(path: str, delimiter: str = ",", dtypes: dict = None) -> pd.DataFrame:
 	"""
 	Reads a CSV file from a given path into a pandas DataFrame. The default delimiter is a comma,
@@ -87,8 +86,7 @@ def read_geoparquet_to_polars(path: str, geometry_field: str = 'geometry', dtype
 
 	return pl.from_pandas(gdf)
 
-
-def read_postgres_to_pandas_df(query: str, engine: Engine) -> pd.DataFrame:
+def read_postgres_from_query_to_pandas_df(query: str, engine: Engine) -> pd.DataFrame:
 	"""
 	Reads data from a PostgreSQL database into a Pandas DataFrame using an SQLAlchemy engine.
 
@@ -107,6 +105,28 @@ def read_postgres_to_pandas_df(query: str, engine: Engine) -> pd.DataFrame:
 	except Exception as e:
 		logging.error(f"Error while fetching data: {e}")
 		raise
+
+
+def read_postgis_table_to_geopandas(table: str, engine, schema: str = "public", columns: list = None,
+									geom_col: str = "geometry") -> gpd.GeoDataFrame:
+	"""
+	Reads a PostGIS table into a GeoDataFrame.
+
+	:param table: The name of the table to select from.
+	:param engine: SQLAlchemy engine connection.
+	:param schema: Schema name (default is 'public').
+	:param columns: List of column names to select. If None, selects all columns with '*'.
+	:param geom_col: Name of the geometry column.
+	:return: GeoDataFrame containing the selected data from the specified table.
+	"""
+
+	# Generate the SQL query for the table with specific columns (or all columns)
+	query = pgu.sql_gen_select_columns_from_table(table, schema, columns)
+
+	# Execute the SQL query and read it directly into a GeoDataFrame
+	gdf = gpd.read_postgis(query, engine, geom_col=geom_col)
+
+	return gdf
 
 
 # WRITING

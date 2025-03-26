@@ -227,3 +227,27 @@ def sql_gen_remove_records_from_table(table_to_update: str, field_to_filter: str
     """
 
     return sql_statement
+
+def sql_gen_select_columns_from_table(table: str, schema: str = "public", columns: list = None) -> str:
+    """
+    Generate a SQL statement to select specific columns (or all columns) from a table in a schema.
+
+    :param table: Name of the table to select from.
+    :param schema: Schema name (default is 'public').
+    :param columns: List of column names to select. If None, selects all columns with '*'.
+    :return: SQL statement as a single string.
+    """
+
+    # If no columns are specified, select all columns
+    if columns is None:
+        column_str = "*"
+    else:
+        # Otherwise, join the columns into a comma-separated list
+        column_str = ", ".join([f'"{col}"' for col in columns])
+
+    # Build the query to select the columns
+    sql_statement = f"""
+        SELECT {column_str} FROM "{schema}"."{table}";
+    """
+
+    return sql_statement
