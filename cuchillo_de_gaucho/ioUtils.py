@@ -119,10 +119,12 @@ def read_postgis_table_to_geopandas(table: str, engine, schema: str = "public", 
 	:param geom_col: Name of the geometry column.
 	:return: GeoDataFrame containing the selected data from the specified table.
 	"""
-
+	if geom_col not in columns:
+		columns.append(geom_col)
 	# Generate the SQL query for the table with specific columns (or all columns)
 	query = pgu.sql_gen_select_columns_from_table(table, schema, columns)
 
+	print(query)
 	# Execute the SQL query and read it directly into a GeoDataFrame
 	gdf = gpd.read_postgis(query, engine, geom_col=geom_col)
 

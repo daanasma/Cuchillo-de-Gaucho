@@ -136,9 +136,10 @@ def geopandas_add_zone_attribute_to_points(points_gdf: gpd.GeoDataFrame, regions
     :param new_col_name: The name of the new column to store the region classification.
     :return: A GeoDataFrame with the assigned region ID.
     """
+    geometry_col = regions_gdf.geometry.name
 
     # Perform spatial join
-    joined_gdf = gpd.sjoin(points_gdf, regions_gdf[[region_col, "geometry"]], predicate="within", how="left")
+    joined_gdf = gpd.sjoin(points_gdf, regions_gdf[[region_col, geometry_col]], predicate="within", how="left")
 
     # Keep relevant columns and rename the region column
     return joined_gdf.drop(columns=["index_right"]).rename(columns={region_col: new_col_name})

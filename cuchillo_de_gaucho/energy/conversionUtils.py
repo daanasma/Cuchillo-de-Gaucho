@@ -3,6 +3,8 @@
 
 def kilo_to_giga(kilo: float) -> float:
     return kilo / 1_000_000
+def kilo_to_mega(kilo: float) -> float:
+    return kilo / 1_000
 
 def giga_to_kilo(giga: float) -> float:
     return giga * 1_000_000
