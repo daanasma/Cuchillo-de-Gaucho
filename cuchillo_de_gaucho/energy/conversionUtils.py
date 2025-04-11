@@ -9,6 +9,9 @@ def kilo_to_mega(kilo: float) -> float:
 def giga_to_kilo(giga: float) -> float:
     return giga * 1_000_000
 
+def giga_to_mega(giga: float) -> float:
+    return giga * 1_000
+
 def gwh_to_tj(gwh: float) -> float:
     """
     Convert gigawatt-hours (GWh) to terajoules (TJ).
