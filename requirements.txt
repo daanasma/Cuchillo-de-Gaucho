@@ -8,3 +8,4 @@ geoalchemy2
 requests
 fiona
 shapely
+psutil

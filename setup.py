@@ -11,7 +11,8 @@ setup(
                       'polars',
                       'pyarrow',
                       'fiona',
-                      'shapely'],  # List any dependencies here
+                      'shapely',
+                      'psutil'],  # List any dependencies here
     author="Daan Asma",
     author_email="nope",
     description="A collection of useful utility functions.", 

@@ -1,10 +1,31 @@
 import os
 import json
 import logging.config
+import psutil
+
+
+class RAMLoggingFilter(logging.Filter):
+    def filter(self, record):
+        # Get available and total RAM
+        used_ram_gb = (psutil.virtual_memory().total - psutil.virtual_memory().available) / (1024 ** 3)
+
+        total_ram_gb = psutil.virtual_memory().total / (1024 ** 3)  # in GB
+
+        # Add custom attributes to the log record
+        record.used_ram = f"{used_ram_gb:.2f} GB"
+        record.total_ram = f"{total_ram_gb:.2f} GB"
+
+        return True
 
 def _set_basic_logging(level):
     logging.basicConfig(level=level)
     logging.info("Logging Config path not found - using basic setup")
+
+
+def add_ram_filter():
+    # Add the RAM filter to the root logger
+    logger = logging.getLogger()
+    logger.addFilter(RAMLoggingFilter())
 
 
 def setup_logging(default_level=logging.INFO, env_key="LOG_CONFIG"):
@@ -29,13 +50,16 @@ def setup_logging(default_level=logging.INFO, env_key="LOG_CONFIG"):
             if not os.path.exists(log_dir):
                 os.makedirs(log_dir)
             logging.config.dictConfig(config)
+            add_ram_filter()
             logging.info("Logging Config setup success.")
         else:
             _set_basic_logging(default_level)
+            add_ram_filter()
             logging.info("No log directory found, using basic setup")
 
     else:
         _set_basic_logging(default_level)
+        add_ram_filter()
         logging.info("Logging Config path not found - using basic setup")
 
 
