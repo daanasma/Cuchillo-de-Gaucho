@@ -64,7 +64,8 @@ def read_csv_to_dataframe(path: str, delimiter: str = ",", dtypes: dict = None) 
 		logging.error(f"Failed to read CSV file '{filename}'. Error: {e}")
 		raise
 
-def read_geoparquet_to_polars(path: str, geometry_field: str = 'geometry', dtype_transform: dict= None):
+
+def read_geoparquet_to_polars(path: str, geometry_field: str = 'geometry', dtype_transform: dict = None):
 	"""
 	Reads a GeoParquet file into a Polars DataFrame, converting geometries to WKT format.
 
@@ -78,13 +79,16 @@ def read_geoparquet_to_polars(path: str, geometry_field: str = 'geometry', dtype
 	:return:
 	    A Polars DataFrame with geometries as WKT strings and optional type transformations applied.
 	"""
+	logging.info(f'Start reading geoparquet to Polars - {path}')
 	gdf = gpd.read_parquet(path)
 	gdf[geometry_field] = gdf[geometry_field].apply(lambda geom: geom.wkt if geom else None)
 	if dtype_transform:
 		for fieldname, datatype in dtype_transform.items():
 			gdf[fieldname] = gdf[fieldname].astype(datatype)
 
-	return pl.from_pandas(gdf)
+	pol_df = pl.from_pandas(gdf)
+	logging.info('Finished reading')
+	return pol_df
 
 def read_postgres_from_query_to_pandas_df(query: str, engine: Engine) -> pd.DataFrame:
 	"""
