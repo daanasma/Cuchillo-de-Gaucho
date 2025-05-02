@@ -418,7 +418,7 @@ def pandas_to_geopandas(df, geom_col='geom', crs=packageConfig.DEFAULT_CRS):
 
 	# Handle geometry conversion (from WKT strings if necessary)
 
-	df[geom_col] = df[geom_col].apply(geou.safe_wkt_load)
+	df[geom_col] = df[geom_col].astype(str).apply(geou.safe_wkt_load)
 
 	# Create and return the GeoDataFrame
 	return gpd.GeoDataFrame(df, geometry=geom_col, crs=crs)
