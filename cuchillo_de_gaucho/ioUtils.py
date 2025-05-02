@@ -312,7 +312,8 @@ def ogr_load_data_to_postgis(
 		schema_name='public',
 		overwrite=True,
 		source_format=None,
-		target_crs=None
+		target_crs=None,
+		force_geometry_type=None
 ):
 	"""
 	Load a spatial dataset into PostGIS using ogr2ogr, supports multiple input file types.
@@ -329,6 +330,7 @@ def ogr_load_data_to_postgis(
 	:param overwrite: If True, overwrite the target table if it exists
 	:param source_format: Input file format (e.g., 'GPKG', 'ESRI Shapefile'). Auto-detected if None.
 	:param target_crs: Target CRS (e.g. 'EPSG:4326').
+	:param force_geometry_type: Add a geometry type that should be forced (e.g. 'POLYGON'). Ignore if None
 	:return: None
 	"""
 	logging.info("Start loading data to postgres.")
@@ -372,6 +374,8 @@ def ogr_load_data_to_postgis(
 
 	if target_crs:
 		command.extend(['-t_srs', target_crs])
+	if force_geometry_type:
+		command.extend(['-nlt', force_geometry_type])
 	logging.info(command)
 	# Run the command as a subprocess
 	wu.run_subprocess(command)
@@ -449,7 +453,7 @@ def polars_to_pandas(polars_df):
 		pandas.DataFrame: Converted Pandas DataFrame.
 	"""
 	logging.info(f"Start converting polars to pandas. n={len(polars_df)} rows.")
-	pdf = polars_df.to_pandas()
+	pdf = polars_df.to_pandas(use_pyarrow_extension_array=True)
 	return pdf
 
 @time_function

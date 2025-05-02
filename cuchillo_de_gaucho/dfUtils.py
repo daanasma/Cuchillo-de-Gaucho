@@ -110,13 +110,18 @@ def geopandas_spatial_select(gdf: gpd.geodataframe, selection_mask_gdf: gpd.GeoD
     selector = selection_mask_gdf.to_crs(crs)
 
     selector["geometry"] = selector.geometry.buffer(tolerance_m)
+
     logging.info(f'Start selection of subset of geodataframe (spatial relationship: {predicate})')
-    subset = gpd.sjoin(gdf, selector, predicate=predicate)
+
+    if not add_select_attr:
+        # Avoid column name clashes by dropping/renaming duplicates
+        overlapping_columns = gdf.columns.intersection(selector.columns).difference(["geometry"])
+        selector = selector.drop(columns=overlapping_columns)
+
+    subset = gpd.sjoin(gdf, selector, predicate=predicate, lsuffix="", rsuffix="_sel")
     if not add_select_attr:
         # Drop columns from the right GeoDataFrame (selector) if you only want left attributes
-        columns_to_drop = [col for col in subset.columns if col not in gdf.columns]
-        subset = subset.drop(columns=columns_to_drop)
-
+        subset = subset[[col for col in subset.columns if not col.endswith("_sel")]]
     logging.info(f'Found {len(subset)} records.')
 
     subset = subset.drop_duplicates()
