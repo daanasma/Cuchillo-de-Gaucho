@@ -13,7 +13,9 @@ from .decorators import time_function
 from sqlalchemy import Engine
 from geoalchemy2 import Geometry, WKTElement
 from shapely.geometry import shape
+import shapely.wkb
 from shapely import wkt
+import pyarrow.parquet as pq
 
 import logging
 
