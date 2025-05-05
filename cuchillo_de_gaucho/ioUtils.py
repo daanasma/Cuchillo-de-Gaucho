@@ -64,27 +64,34 @@ def read_csv_to_dataframe(path: str, delimiter: str = ",", dtypes: dict = None) 
 		logging.error(f"Failed to read CSV file '{filename}'. Error: {e}")
 		raise
 
-def read_geoparquet_to_polars(path: str, geometry_field: str = 'geometry', dtype_transform: dict= None):
-	"""
-	Reads a GeoParquet file into a Polars DataFrame, converting geometries to WKT format.
+def read_geoparquet_to_polars(path: str, geometry_field: str = 'geometry', dtype_transform: dict = None):
+    """
+    Reads a GeoParquet file into a Polars DataFrame, converting geometries to WKT format.
 
-	:param path:
-	    Path to the GeoParquet file.
-	:param geometry_field:
-	    Name of the geometry column to be converted to WKT format. Defaults to 'geometry'.
-	:param dtype_transform:
-	    Optional dictionary mapping column names to target data types for conversion.
+    :param path: Path to the GeoParquet file.
+    :param geometry_field: Name of the geometry column to be converted to WKT format. Defaults to 'geometry'.
+    :param dtype_transform: Optional dictionary mapping column names to target data types for conversion.
+    :return: A Polars DataFrame with geometries as WKT strings and optional type transformations applied.
+    """
+    table = pq.read_table(path)
+    data = table.to_pydict()
 
-	:return:
-	    A Polars DataFrame with geometries as WKT strings and optional type transformations applied.
-	"""
-	gdf = gpd.read_parquet(path)
-	gdf[geometry_field] = gdf[geometry_field].apply(lambda geom: geom.wkt if geom else None)
-	if dtype_transform:
-		for fieldname, datatype in dtype_transform.items():
-			gdf[fieldname] = gdf[fieldname].astype(datatype)
+    # Convert WKB to WKT
+    wkb_values = data.get(geometry_field)
+    if wkb_values is not None:
+        data[geometry_field] = [
+            shapely.wkb.loads(wkb).wkt if wkb else None
+            for wkb in wkb_values
+        ]
 
-	return pl.from_pandas(gdf)
+    # Apply dtype conversions if needed
+    if dtype_transform:
+        for fieldname, datatype in dtype_transform.items():
+            if fieldname in data:
+                data[fieldname] = [datatype(v) if v is not None else None for v in data[fieldname]]
+
+    return pl.DataFrame(data)
+
 
 def read_postgres_from_query_to_pandas_df(query: str, engine: Engine) -> pd.DataFrame:
 	"""

@@ -12,8 +12,8 @@ class RAMLoggingFilter(logging.Filter):
         total_ram_gb = psutil.virtual_memory().total / (1024 ** 3)  # in GB
 
         # Add custom attributes to the log record
-        record.used_ram = f"{used_ram_gb:.2f} GB"
-        record.total_ram = f"{total_ram_gb:.2f} GB"
+        record.used_ram = f"{used_ram_gb:.2f}"
+        record.total_ram = f"{total_ram_gb:.2f}"
 
         return True
 
