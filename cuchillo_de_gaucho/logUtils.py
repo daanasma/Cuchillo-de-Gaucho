@@ -17,14 +17,7 @@ class RAMLoggingFilter(logging.Filter):
 
 def _set_basic_logging(level):
     logging.basicConfig(level=level)
-    add_ram_filter()
     logging.info("Logging Config path not found - using basic setup")
-
-
-def add_ram_filter():
-    # Add the RAM filter to the root logger
-    logger = logging.getLogger()
-    logger.addFilter(RAMLoggingFilter())
 
 
 def setup_logging(default_level=logging.INFO, env_key="LOG_CONFIG"):
@@ -49,11 +42,9 @@ def setup_logging(default_level=logging.INFO, env_key="LOG_CONFIG"):
             if not os.path.exists(log_dir):
                 os.makedirs(log_dir)
             logging.config.dictConfig(config)
-            add_ram_filter()
             logging.info("Logging Config setup success.")
         else:
             _set_basic_logging(default_level)
-
             logging.info("No log directory found, using basic setup")
 
     else:
