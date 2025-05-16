@@ -465,18 +465,21 @@ def polars_to_pandas(polars_df):
 	pdf = polars_df.to_pandas(use_pyarrow_extension_array=True)
 	return pdf
 
+def polars_to_geopandas(polars_df: pl.DataFrame, geom_col: str = "geometry", crs: str = packageConfig.DEFAULT_CRS) -> gpd.GeoDataFrame:
+    """
+    Convert a Polars DataFrame with WKT geometry to a GeoPandas GeoDataFrame.
+    """
+    df = polars_df.to_dicts()
+    for row in df:
+        row[geom_col] = wkt.loads(row[geom_col])
+    return gpd.GeoDataFrame(df, geometry=geom_col, crs=crs)
+
+
 @time_function
-def polars_to_geoparquet(polars_df, geoparquet_path: str, geom_col: str = "geometry", crs: str = packageConfig.DEFAULT_CRS):
-	# logging.info(f"Start converting polars to geoparquet. n={len(polars_df)} rows. crs = {crs}")
-	# pdf = polars_to_pandas(polars_df)
-	# pdf_geo = pandas_to_geopandas(pdf, geom_col, crs)
-	# pdf_geo.to_parquet(geoparquet_path)
-	logging.info(f"Start converting polars to geoparquet. n={len(polars_df)} rows. crs = {crs}")
-
-	# Convert WKT to Shapely geometries
-	df = polars_df.to_dicts()
-	for row in df:
-		row[geom_col] = wkt.loads(row[geom_col])
-
-	gdf = gpd.GeoDataFrame(df, geometry=geom_col, crs=crs)
-	gdf.to_parquet(geoparquet_path)
+def polars_to_geoparquet(polars_df: pl.DataFrame, geoparquet_path: str, geom_col: str = "geometry", crs: str = packageConfig.DEFAULT_CRS):
+    """
+    Convert a Polars DataFrame to a GeoParquet file, using a geometry column in WKT format.
+    """
+    logging.info(f"Start converting polars to geoparquet. n={len(polars_df)} rows. crs = {crs}")
+    gdf = polars_to_geopandas(polars_df, geom_col, crs)
+    gdf.to_parquet(geoparquet_path)
