@@ -465,14 +465,20 @@ def polars_to_pandas(polars_df):
 	pdf = polars_df.to_pandas(use_pyarrow_extension_array=True)
 	return pdf
 
-def polars_to_geopandas(polars_df: pl.DataFrame, geom_col: str = "geometry", crs: str = packageConfig.DEFAULT_CRS) -> gpd.GeoDataFrame:
-    """
+
+def polars_to_geopandas(polars_df: pl.DataFrame, geom_col: str = "geometry",
+						crs: str = packageConfig.DEFAULT_CRS) -> gpd.GeoDataFrame:
+	"""
     Convert a Polars DataFrame with WKT geometry to a GeoPandas GeoDataFrame.
     """
-    df = polars_df.to_dicts()
-    for row in df:
-        row[geom_col] = wkt.loads(row[geom_col])
-    return gpd.GeoDataFrame(df, geometry=geom_col, crs=crs)
+	df = polars_df.to_dicts()
+	for row in df:
+		row[geom_col] = wkt.loads(row[geom_col])
+
+	gdf = gpd.GeoDataFrame(df, geometry=geom_col, crs=crs)
+	gdf.set_geometry(geom_col, inplace=True)
+	return gdf
+
 
 
 @time_function
